@@ -4,9 +4,9 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import StudentDashboard from "./components/StudentDashboard";
 import TeacherDashboard from "./components/TeacherDashboard";
-import Courses from "./pages/Courses";
-import Notifications from "./pages/Notifications";
-import Profile from "./pages/Profile";
+import Courses from "./components/Courses";
+import Notifications from "./components/Notifications";
+import Profile from "./components/Profile";
 
 export default function App() {
   return (
