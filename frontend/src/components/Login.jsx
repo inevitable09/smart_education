@@ -1,52 +1,76 @@
-// backend/seed.js
-import dotenv from 'dotenv';
-dotenv.config();
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import User from './models/User.js';
-import Course from './models/Course.js';
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-const MONGO = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sih2025';
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
 
-async function run() {
-  await mongoose.connect(MONGO, { useNewUrlParser: true, useUnifiedTopology: true });
-  console.log('Connected to DB for seeding');
+    try {
+      // 1️⃣ Firebase sign in
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
 
-  // Remove existing demo data (optional)
-  await User.deleteMany({ email: { $in: ['teacher@test.com','student@test.com'] } });
-  await Course.deleteMany({ title: /Demo/i });
+      // 2️⃣ Get Firestore role
+      const userRef = doc(db, "users", userCred.user.uid);
+      const snap = await getDoc(userRef);
 
-  // Create teacher
-  const passwordHash = await bcrypt.hash('Teacher@123', 10);
-  const teacher = await User.create({
-    name: 'Demo Teacher',
-    email: 'teacher@test.com',
-    password: passwordHash,
-    role: 'teacher'
-  });
-  console.log('Created teacher:', teacher.email);
+      if (snap.exists()) {
+        const role = snap.data().role;
 
-  // Create a demo student (optional)
-  const studentHash = await bcrypt.hash('Student@123', 10);
-  const student = await User.create({
-    name: 'Demo Student',
-    email: 'student@test.com',
-    password: studentHash,
-    role: 'student'
-  });
-  console.log('Created student:', student.email);
+        // 3️⃣ Redirect based on role
+        if (role === "student") {
+          navigate("/student");
+        } else if (role === "teacher") {
+          navigate("/teacher");
+        } else {
+          setError("Invalid role assigned. Contact admin.");
+        }
+      } else {
+        setError("User record not found in Firestore.");
+      }
+    } catch (err) {
+      console.error("Login error:", err.message);
+      setError(err.message);
+    }
+  };
 
-  // Create demo courses
-  const courses = [
-    { title: 'Demo: Physics Basics', description: 'Kinematics and dynamics', teacher: teacher._id },
-    { title: 'Demo: Data Structures', description: 'Arrays, Lists, Trees', teacher: teacher._id }
-  ];
-  await Course.insertMany(courses);
-  console.log('Inserted demo courses');
-
-  await mongoose.disconnect();
-  console.log('Seeding finished, disconnected.');
+  return (
+    <div className="glass p-8 max-w-md mx-auto rounded-2xl">
+      <h2 className="text-2xl mb-4 font-semibold">Login</h2>
+      <form onSubmit={handleLogin} className="space-y-3">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-3 rounded-lg bg-white/5"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-3 rounded-lg bg-white/5"
+        />
+        <button
+          type="submit"
+          className="btn-accent w-full text-white py-2 rounded-lg"
+        >
+          Login
+        </button>
+      </form>
+      <div className="mt-4 text-sm text-slate-300">Don't have an account? <a href="/register" className="text-white underline">Register</a></div>
+      {error && <p className="text-red-400 mt-3">{error}</p>}
+    </div>
+    
+  );
 }
 
-run().catch(err => { console.error(err); process.exit(1); });
