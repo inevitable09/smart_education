@@ -1,28 +1,74 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
-export default function Login(){
-  const [email,setEmail]=useState('')
-  const [password,setPassword]=useState('')
-  const [role,setRole]=useState('student')
-  const navigate = useNavigate()
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleLogin = async ()=>{ navigate(role==='student'?'/student':'/teacher') }
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      // 1️⃣ Firebase sign in
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+
+      // 2️⃣ Get Firestore role
+      const userRef = doc(db, "users", userCred.user.uid);
+      const snap = await getDoc(userRef);
+
+      if (snap.exists()) {
+        const role = snap.data().role;
+
+        // 3️⃣ Redirect based on role
+        if (role === "student") {
+          navigate("/student");
+        } else if (role === "teacher") {
+          navigate("/teacher");
+        } else {
+          setError("Invalid role assigned. Contact admin.");
+        }
+      } else {
+        setError("User record not found in Firestore.");
+      }
+    } catch (err) {
+      console.error("Login error:", err.message);
+      setError(err.message);
+    }
+  };
 
   return (
-    <div className="max-w-xl mx-auto glass p-8 rounded-2xl">
-      <h2 className="text-2xl font-semibold mb-4">Welcome back</h2>
-      <p className="text-slate-300 mb-6">Sign in to continue to your personalized learning path.</p>
-      <div className="space-y-3">
-        <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" className="w-full p-3 rounded-lg bg-white/5"/>
-        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" className="w-full p-3 rounded-lg bg-white/5"/>
-        <select value={role} onChange={e=>setRole(e.target.value)} className="w-full p-3 rounded-lg bg-white/5">
-          <option value="student">Student</option>
-          <option value="teacher">Teacher</option>
-        </select>
-        <button onClick={handleLogin} className="btn-accent w-full text-white mt-2">Sign in</button>
-      </div>
-      <div className="mt-4 text-sm text-slate-300">Don't have an account? <a href="/register" className="text-white underline">Register</a></div>
+    <div className="glass p-8 max-w-md mx-auto rounded-2xl">
+      <h2 className="text-2xl mb-4 font-semibold">Login</h2>
+      <form onSubmit={handleLogin} className="space-y-3">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-3 rounded-lg bg-white/5"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-3 rounded-lg bg-white/5"
+        />
+        <button
+          type="submit"
+          className="btn-accent w-full text-white py-2 rounded-lg"
+        >
+          Login
+        </button>
+      </form>
+
+      {error && <p className="text-red-400 mt-3">{error}</p>}
     </div>
-  )
+  );
 }
