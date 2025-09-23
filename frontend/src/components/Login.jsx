@@ -15,10 +15,10 @@ export default function Login() {
     setError("");
 
     try {
-      // 1️⃣ Firebase sign in
+      // 1️⃣ Sign in with Firebase Auth
       const userCred = await signInWithEmailAndPassword(auth, email, password);
 
-      // 2️⃣ Get Firestore role
+      // 2️⃣ Fetch role from Firestore
       const userRef = doc(db, "users", userCred.user.uid);
       const snap = await getDoc(userRef);
 

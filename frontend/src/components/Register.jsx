@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
 export default function Register() {
+  
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -18,35 +19,45 @@ export default function Register() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  e.preventDefault();
+  setError("");
+  setSuccess("");
 
-    try {
-      // 1️⃣ Create account in Firebase Auth
-      const userCred = await createUserWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
-      );
+  try {
+    // 1️⃣ Create account in Firebase Auth
+    const userCred = await createUserWithEmailAndPassword(
+      auth,
+      form.email,
+      form.password
+    );
 
-      // 2️⃣ Update profile with display name
-      await updateProfile(userCred.user, { displayName: form.name });
+    // 2️⃣ Update profile with display name
+    await updateProfile(userCred.user, { displayName: form.name });
 
-      // 3️⃣ Store user data in Firestore
-      await setDoc(doc(db, "users", userCred.user.uid), {
-        name: form.name,
-        email: form.email,
-        role: form.role,
-        createdAt: new Date(),
-      });
+    // 3️⃣ Store user data in Firestore
+    await setDoc(doc(db, "users", userCred.user.uid), {
+      name: form.name,
+      email: form.email,
+      role: form.role,
+      createdAt: new Date(),
+    });
 
-      setSuccess("Account created successfully! You can now login.");
-      console.log("Registered:", userCred.user);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+    setSuccess("Account created successfully! You can now login.");
+    console.log("Registered:", userCred.user);
+
+    // ✅ Reset form state
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      role: "student",
+    });
+    
+  } catch (err) {
+    setError(err.message);
+  }
+};
+
 
   return (
     <div className="max-w-xl mx-auto glass p-8 rounded-2xl">
